@@ -1,0 +1,25 @@
+services:
+  db:
+    image: ${ALTIBASE_IMAGE:-altibase/altibase:latest}
+    hostname: ${ALTIBASE_HOSTNAME:-altibase}
+    ports:
+      - "${ALTIBASE_PORT:-20300}:20300"
+
+  e2e:
+    build:
+      context: .
+      dockerfile: docker/e2e.Dockerfile
+      args:
+        BASE_IMAGE: ${ALTIBASE_IMAGE:-altibase/altibase:latest}
+    depends_on:
+      - db
+    environment:
+      PYALTIBASE_RUN_E2E: "1"
+      PYALTIBASE_HOST: db
+      PYALTIBASE_PORT: "${ALTIBASE_PORT:-20300}"
+      PYALTIBASE_DATABASE: ${ALTIBASE_DATABASE:-mydb}
+      PYALTIBASE_USER: ${ALTIBASE_USER:-sys}
+      PYALTIBASE_PASSWORD: ${ALTIBASE_PASSWORD:-manager}
+      PYALTIBASE_DRIVER: ${ALTIBASE_DRIVER:-ALTIBASE_HDB_ODBC_64bit}
+      PYALTIBASE_NLS_USE: ${ALTIBASE_NLS_USE:-UTF8}
+
