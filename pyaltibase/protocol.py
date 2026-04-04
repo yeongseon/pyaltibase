@@ -34,7 +34,7 @@ def build_connection_string(config: ConnectionConfig) -> str:
 
     parts: list[str] = []
     for key, value in attributes:
-        parts.append(f"{key}={_escape_value(value, force_braces=key.upper() == 'DRIVER')}")
+        parts.append(f"{key}={_escape_value(value)}")
     return ";".join(parts) + ";"
 
 
@@ -44,9 +44,9 @@ def _stringify_option(value: object) -> str:
     return str(value)
 
 
-def _escape_value(value: str, force_braces: bool = False) -> str:
+def _escape_value(value: str) -> str:
     if not value:
         return value
-    if force_braces or any(char in value for char in ";{} ") or value != value.strip():
+    if any(char in value for char in ";{} ") or value != value.strip():
         return "{" + value.replace("}", "}}") + "}"
     return value

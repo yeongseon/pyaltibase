@@ -1,16 +1,21 @@
 services:
   db:
-    image: ${ALTIBASE_IMAGE:-altibase/altibase:latest}
+    image: ${ALTIBASE_IMAGE:-altibase/a_plus_edition:latest}
     hostname: ${ALTIBASE_HOSTNAME:-altibase}
     ports:
       - "${ALTIBASE_PORT:-20300}:20300"
+    environment:
+      MODE: foreground
+      DB_SIZE: "${ALTIBASE_DB_SIZE:-500}"
+      DB_CHARSET: "${ALTIBASE_DB_CHARSET:-UTF8}"
+      NATIONAL_CHARSET: "${ALTIBASE_NATIONAL_CHARSET:-UTF8}"
 
   e2e:
     build:
       context: .
       dockerfile: docker/e2e.Dockerfile
       args:
-        BASE_IMAGE: ${ALTIBASE_IMAGE:-altibase/altibase:latest}
+        BASE_IMAGE: ${ALTIBASE_IMAGE:-altibase/a_plus_edition:latest}
     depends_on:
       - db
     environment:

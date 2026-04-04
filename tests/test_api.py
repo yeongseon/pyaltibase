@@ -31,7 +31,7 @@ class APITestCase(unittest.TestCase):
 
         value = build_connection_string(config)
 
-        self.assertIn("DRIVER={ALTIBASE_HDB_ODBC_64bit}", value)
+        self.assertIn("DRIVER=ALTIBASE_HDB_ODBC_64bit", value)
         self.assertIn("Server=localhost", value)
         self.assertIn("PORT=20300", value)
         self.assertIn("Database=sample", value)
