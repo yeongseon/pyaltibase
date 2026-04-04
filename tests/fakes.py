@@ -146,7 +146,9 @@ class ErrorRaisingNativeConnection(FakeNativeConnection):
         self.close_error = close_error
         self.autocommit_error = None
         self._autocommit_value = autocommit
-        super().__init__(connection_string, autocommit=autocommit, timeout=timeout, cursor_factory=cursor_factory)
+        super().__init__(
+            connection_string, autocommit=autocommit, timeout=timeout, cursor_factory=cursor_factory
+        )
         self.autocommit_error = autocommit_error
 
     @property
@@ -196,6 +198,8 @@ class FakePyodbcModule:
         self.cursor_factory = cursor_factory
 
     def connect(self, connection_string: str, **kwargs: object) -> FakeNativeConnection:
-        connection = FakeNativeConnection(connection_string, cursor_factory=self.cursor_factory, **kwargs)
+        connection = FakeNativeConnection(
+            connection_string, cursor_factory=self.cursor_factory, **kwargs
+        )
         self.connections.append(connection)
         return connection

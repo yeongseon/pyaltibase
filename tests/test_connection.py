@@ -57,7 +57,9 @@ class ConnectionTestCase(unittest.TestCase):
             self.assertTrue(native.closed)
 
     def test_backend_errors_are_mapped(self) -> None:
-        fake_pyodbc = FakePyodbcModule(cursor_factory=lambda: FailingCursor(FakeOperationalError("down")))
+        fake_pyodbc = FakePyodbcModule(
+            cursor_factory=lambda: FailingCursor(FakeOperationalError("down"))
+        )
 
         with patch("pyaltibase.connection.import_module", return_value=fake_pyodbc):
             connection = pyaltibase.connect()
@@ -119,7 +121,9 @@ class ConnectionTestCase(unittest.TestCase):
 
         with patch("pyaltibase.connection.import_module", return_value=fake_pyodbc):
             connection = pyaltibase.connect()
-            connection._native = ErrorRaisingNativeConnection("dsn", close_error=FakeOperationalError("close failed"))
+            connection._native = ErrorRaisingNativeConnection(
+                "dsn", close_error=FakeOperationalError("close failed")
+            )
 
             with self.assertRaises(OperationalError):
                 connection.close()

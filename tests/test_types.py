@@ -27,8 +27,12 @@ class TypesTestCase(unittest.TestCase):
         ticks = 1_741_769_200
 
         self.assertEqual(pyaltibase.DateFromTicks(ticks), datetime.date.fromtimestamp(ticks))
-        self.assertEqual(pyaltibase.TimeFromTicks(ticks), datetime.datetime.fromtimestamp(ticks).time())
-        self.assertEqual(pyaltibase.TimestampFromTicks(ticks), datetime.datetime.fromtimestamp(ticks))
+        self.assertEqual(
+            pyaltibase.TimeFromTicks(ticks), datetime.datetime.fromtimestamp(ticks).time()
+        )
+        self.assertEqual(
+            pyaltibase.TimestampFromTicks(ticks), datetime.datetime.fromtimestamp(ticks)
+        )
 
         with self.assertRaises(TypeError):
             pyaltibase.Binary(123)  # type: ignore[arg-type]

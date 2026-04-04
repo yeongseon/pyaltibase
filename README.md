@@ -1,5 +1,8 @@
 # pyaltibase
 
+[![CI](https://github.com/yeongseon/pyaltibase/actions/workflows/ci.yml/badge.svg)](https://github.com/yeongseon/pyaltibase/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/pyaltibase)](https://pypi.org/project/pyaltibase/)
+
 **Unofficial Python DB-API 2.0 connector for Altibase**
 
 `pyaltibase` provides a Pythonic DB-API 2.0 interface for Altibase databases.

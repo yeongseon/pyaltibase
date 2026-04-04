@@ -9,7 +9,9 @@ import uuid
 import pyaltibase
 
 
-@unittest.skipUnless(os.getenv("PYALTIBASE_RUN_E2E") == "1", "set PYALTIBASE_RUN_E2E=1 to run e2e tests")
+@unittest.skipUnless(
+    os.getenv("PYALTIBASE_RUN_E2E") == "1", "set PYALTIBASE_RUN_E2E=1 to run e2e tests"
+)
 class AltibaseE2ETestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
