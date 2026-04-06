@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/yeongseon/pyaltibase/actions/workflows/ci.yml/badge.svg)](https://github.com/yeongseon/pyaltibase/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/pyaltibase)](https://pypi.org/project/pyaltibase/)
+[![docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://yeongseon.github.io/pyaltibase/)
 
 **Unofficial Python DB-API 2.0 connector for Altibase**
 
