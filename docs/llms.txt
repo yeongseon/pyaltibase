@@ -1,0 +1,23 @@
+# pyaltibase
+
+> Pure Python DB-API 2.0 driver for the Altibase relational database, providing direct connectivity without native client libraries.
+
+pyaltibase is a lightweight, pure-Python database driver implementing PEP 249 (DB-API 2.0) for Altibase RDBMS. It handles wire-protocol communication, type conversion, connection management, and parameterized queries. Default connection: `altibase://sys:@localhost:20300/mydb`.
+
+## Core Documentation
+
+- [Installation](https://yeongseon.github.io/pyaltibase/installation/): pip install, prerequisites, verification
+- [Quick Start](https://yeongseon.github.io/pyaltibase/quickstart/): First connection, basic CRUD, parameterized queries
+- [Connection Guide](https://yeongseon.github.io/pyaltibase/connection/): URL formats, connection parameters, pooling, timeouts
+- [API Reference](https://yeongseon.github.io/pyaltibase/api/): Module, Connection, Cursor classes, DB-API 2.0 globals
+- [Type Mapping](https://yeongseon.github.io/pyaltibase/types/): Altibase-to-Python type conversion, custom type handling
+
+## Reference
+
+- [Error Handling](https://yeongseon.github.io/pyaltibase/errors/): Exception hierarchy, error codes, troubleshooting
+- [Architecture](https://yeongseon.github.io/pyaltibase/architecture/): Wire protocol, packet format, connection lifecycle
+
+## Optional
+
+- [Testing Guide](https://yeongseon.github.io/pyaltibase/testing/): Running tests, test configuration, fixtures
+- [FAQ](https://yeongseon.github.io/pyaltibase/faq/): Common questions, compatibility, known limitations
