@@ -1,0 +1,973 @@
+# pyaltibase
+
+Unofficial Python DB-API 2.0 connector for Altibase.
+
+## Key features
+
+- Python DB-API 2.0-compatible interface for Altibase
+- Direct host/port and DSN-based connection support
+- Package-owned exception hierarchy and type constructors
+- Docker-friendly testing workflow for unit and end-to-end coverage
+
+## Quick install
+
+```bash
+pip install pyaltibase
+```
+
+## Quick connect example
+
+```python
+import pyaltibase
+
+with pyaltibase.connect(
+    host="localhost",
+    port=20300,
+    database="test",
+    user="sys",
+    password="manager",
+) as conn:
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1")
+    print(cursor.fetchall())
+```
+
+## Documentation
+
+- [Installation](installation.md)
+- [Architecture](architecture.md)
+- [Testing](testing.md)
+- [Agent Playbook](agent-playbook.md)
+
+## Project links
+
+- [GitHub](https://github.com/yeongseon/pyaltibase)
+- [PyPI](https://pypi.org/project/pyaltibase/)
+- [Changelog](https://github.com/yeongseon/pyaltibase/blob/main/CHANGELOG.md)
+- [Contributing](https://github.com/yeongseon/pyaltibase/blob/main/CONTRIBUTING.md)
+
+## Feature highlights
+
+- DB-API 2.0 constants exported at module root (`apilevel`, `threadsafety`, `paramstyle`)
+- Unified exception hierarchy independent from backend exception classes
+- Connection-string assembly separated in protocol layer for testability
+- Explicit connection controls for encoding (`nls_use`) and LOB compatibility (`long_data_compat`)
+
+!!! info "Default connection values"
+    `host="localhost"`, `port=20300`, and `user="sys"` are used unless you override them.
+
+!!! tip "Prefer context managers"
+    Using `with pyaltibase.connect(...) as conn:` ensures commit/rollback and close handling is consistent.
+
+## How requests flow
+
+```mermaid
+flowchart LR
+    A[Application] --> B[pyaltibase.connect]
+    B --> C[ConnectionConfig]
+    C --> D[build_connection_string]
+    D --> E[pyodbc.connect]
+    E --> F[Connection.cursor]
+    F --> G[Cursor.execute/fetch]
+    G --> H[Result tuples]
+```
+
+## Suggested reading path
+
+1. [Installation](installation.md)
+2. [Quick Start](quickstart.md)
+3. [Connection Guide](connection.md)
+4. [API Reference](api.md)
+5. [Type Mapping](types.md)
+6. [Error Handling](errors.md)
+7. [FAQ](faq.md)
+
+---
+
+# Installation
+
+## Python package
+
+```bash
+pip install pyaltibase
+```
+
+## Development install
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+## System prerequisites
+
+- Python 3.10 or newer
+- unixODBC or another compatible ODBC manager
+- `pyodbc`
+- An Altibase ODBC driver available to the runtime environment
+
+## Connection styles
+
+### Direct host and port
+
+```python
+import pyaltibase
+
+conn = pyaltibase.connect(
+    host="localhost",
+    port=20300,
+    database="mydb",
+    user="sys",
+    password="manager",
+)
+```
+
+### DSN
+
+```python
+import pyaltibase
+
+conn = pyaltibase.connect(dsn="ALTIBASE_TEST", user="sys", password="manager")
+```
+
+## Installation decision tree
+
+```mermaid
+flowchart TD
+    A[Start setup] --> B{Python available?}
+    B -->|No| C[Install supported Python]
+    B -->|Yes| D[pip install pyaltibase]
+    D --> E{pyodbc import works?}
+    E -->|No| F[Install pyodbc and ODBC manager libs]
+    E -->|Yes| G{Connection mode?}
+    G -->|DSN| H[Configure DSN in ODBC manager]
+    G -->|Driver| I[Install Altibase ODBC driver]
+    H --> J[Test connect()]
+    I --> J
+```
+
+!!! warning "ODBC dependency chain"
+    `pyaltibase` needs both Python package dependencies and system ODBC pieces.
+    Installing only `pyaltibase` is not enough if `pyodbc` or driver components are missing.
+
+!!! info "DSN vs driver mode"
+    - DSN mode centralizes connection attributes in ODBC manager.
+    - Driver mode keeps host/port/driver directly in application code.
+
+!!! tip "Connection checks"
+    After installation, run a simple `SELECT 1` smoke test before integrating into larger services.
+
+---
+
+# Quick Start
+
+Connect to Altibase in 5 minutes with `pyaltibase`.
+
+## Prerequisites
+
+!!! info "Before you start"
+    You need all of the following:
+
+    - Running Altibase server
+    - Python 3.9+
+    - `pyodbc` installed
+    - Altibase ODBC driver installed and visible to your ODBC manager
+
+!!! warning "Driver requirement"
+    `pyaltibase` is a DB-API wrapper over `pyodbc`. If `pyodbc` or the Altibase driver is missing,
+    connection creation will fail with `InterfaceError`.
+
+## 1) Install package
+
+```bash
+pip install pyaltibase
+```
+
+## 2) Choose connection mode
+
+=== "Driver mode (host/port)"
+
+    ```python
+    import pyaltibase
+
+    conn = pyaltibase.connect(
+        host="localhost",
+        port=20300,
+        database="mydb",
+        user="sys",
+        password="manager",
+        driver="ALTIBASE_HDB_ODBC_64bit",
+        nls_use="UTF8",
+        long_data_compat=True,
+    )
+    ```
+
+=== "DSN mode"
+
+    ```python
+    import pyaltibase
+
+    conn = pyaltibase.connect(
+        dsn="ALTIBASE_TEST",
+        user="sys",
+        password="manager",
+        nls_use="UTF8",
+    )
+    ```
+
+## 3) Run a basic query
+
+```python
+import pyaltibase
+
+with pyaltibase.connect(host="localhost", port=20300, user="sys", password="manager") as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1")
+        print(cur.fetchall())
+```
+
+## 4) Workflow overview
+
+```mermaid
+flowchart LR
+    A[Install pyaltibase] --> B[Install and verify pyodbc]
+    B --> C{Connection mode}
+    C -->|Driver| D[Set host/port/driver]
+    C -->|DSN| E[Set dsn]
+    D --> F[Open connection]
+    E --> F
+    F --> G[Create cursor]
+    G --> H[Execute query]
+    H --> I[Fetch rows]
+```
+
+!!! tip "Gotcha: parameter style"
+    `pyaltibase.paramstyle` is `qmark`, so placeholders are `?`, not `%s` or named style.
+
+    ```python
+    cur.execute("SELECT ?", [1])
+    ```
+
+!!! note "Next step"
+    Continue with [Connection Guide](connection.md) for all connection options and routing details.
+
+---
+
+# Connection Guide
+
+This page documents all connection inputs used by `pyaltibase.connect()` and `ConnectionConfig`.
+
+## ConnectionConfig fields
+
+`pyaltibase.connection.Connection` stores inputs in `ConnectionConfig`.
+
+| Field | Type | Default | Description |
+|---|---|---:|---|
+| `host` | `str` | `"localhost"` | Altibase host used in driver mode |
+| `port` | `int` | `20300` | Altibase listener port used in driver mode |
+| `database` | `str` | `""` | Database name; omitted from connection string when empty |
+| `user` | `str` | `"sys"` | ODBC user (`UID`) |
+| `password` | `str` | `""` | ODBC password (`PWD`) |
+| `dsn` | `str \| None` | `None` | DSN name; when set, DSN mode is used |
+| `driver` | `str` | `"ALTIBASE_HDB_ODBC_64bit"` | ODBC driver name for driver mode |
+| `autocommit` | `bool` | `False` | Passed to `pyodbc.connect(..., autocommit=...)` |
+| `login_timeout` | `int \| None` | `None` | Routed to `pyodbc.connect(..., timeout=...)` |
+| `nls_use` | `str \| None` | `None` | Adds `NLS_USE=<value>` to connection string |
+| `long_data_compat` | `bool` | `True` | Adds `LongDataCompat=on/off` to connection string |
+| `options` | `dict[str, object]` | `{}` | Extra connection attributes from `**kwargs` |
+
+!!! warning "Do not guess parameter names"
+    Use exact field names shown above. Unknown `**kwargs` are forwarded as additional ODBC attributes.
+
+## Driver mode flow
+
+Use driver mode when you provide `host` and `port` directly.
+
+```python
+import pyaltibase
+
+conn = pyaltibase.connect(
+    host="localhost",
+    port=20300,
+    database="mydb",
+    user="sys",
+    password="manager",
+    driver="ALTIBASE_HDB_ODBC_64bit",
+    nls_use="UTF8",
+    long_data_compat=True,
+)
+```
+
+## DSN mode flow
+
+Use DSN mode when ODBC manager already defines the datasource.
+
+```python
+import pyaltibase
+
+conn = pyaltibase.connect(
+    dsn="ALTIBASE_TEST",
+    user="sys",
+    password="manager",
+    nls_use="UTF8",
+    long_data_compat=True,
+)
+```
+
+```mermaid
+flowchart TD
+    A[pyaltibase.connect] --> B{dsn provided?}
+    B -->|Yes| C[Use DSN mode]
+    B -->|No| D[Use driver mode]
+    C --> E[Build DSN + credentials attributes]
+    D --> F[Build DRIVER + Server + PORT (+ Database)]
+    E --> G[Append NLS_USE and LongDataCompat]
+    F --> G
+    G --> H[Append kwargs options]
+    H --> I[pyodbc.connect]
+```
+
+## Connection string assembly details
+
+`build_connection_string(config)` in `pyaltibase.protocol` builds ordered ODBC attributes:
+
+1. DSN mode: `DSN` first
+2. Driver mode: `DRIVER`, `Server`, `PORT`, optional `Database`
+3. `UID`, `PWD` when non-empty
+4. `NLS_USE` when configured
+5. `LongDataCompat=on/off`
+6. Extra options from `config.options` (`**kwargs`)
+
+Values are escaped with braces when needed (`;`, spaces, braces, or leading/trailing spaces).
+
+```mermaid
+flowchart LR
+    A[ConnectionConfig] --> B[Base attributes by mode]
+    B --> C[UID/PWD]
+    C --> D[NLS_USE]
+    D --> E[LongDataCompat]
+    E --> F[options kwargs]
+    F --> G[escape values]
+    G --> H[Join with semicolons]
+```
+
+## NLS_USE (character encoding)
+
+`nls_use` controls the `NLS_USE` ODBC attribute.
+
+!!! info "When to set"
+    Set `nls_use` when client/server character encoding behavior must be explicit.
+    Example: `nls_use="UTF8"`.
+
+!!! warning "Symptoms of mismatch"
+    Garbled non-ASCII text or decode-related backend errors are common signs.
+
+## LongDataCompat (LOB handling)
+
+`long_data_compat` maps to `LongDataCompat`:
+
+- `True`  -> `LongDataCompat=on`
+- `False` -> `LongDataCompat=off`
+
+!!! tip "Troubleshooting"
+    If you see issues around large character/binary payloads, try toggling this flag and retest.
+
+## Connection kwargs routing
+
+Unrecognized keyword arguments passed to `pyaltibase.connect()` are stored in `ConnectionConfig.options` and added to the ODBC connection string.
+
+```python
+conn = pyaltibase.connect(
+    host="localhost",
+    user="sys",
+    password="manager",
+    ApplicationName="my-app",
+    FetchSize=2000,
+)
+```
+
+This becomes extra attributes like `ApplicationName=my-app;FetchSize=2000;`.
+
+## Common connection errors
+
+!!! failure "pyodbc missing"
+    `InterfaceError: pyodbc is required to use pyaltibase...`
+
+    Install `pyodbc` and ensure system ODBC libraries are present.
+
+!!! failure "Driver or DSN not found"
+    Raised by backend and mapped to package exceptions.
+    Verify ODBC driver name (`driver`) or DSN name (`dsn`).
+
+!!! failure "Connection refused on default port"
+    `port=20300` is the default. Confirm server host/port and firewall settings.
+
+---
+
+# API Reference
+
+Reference for public DB-API 2.0 surface in `pyaltibase`.
+
+## Module-level API (`pyaltibase`)
+
+### Constants
+
+| Name | Value | Meaning |
+|---|---|---|
+| `apilevel` | `"2.0"` | DB-API level implemented |
+| `threadsafety` | `1` | Module can be shared, connections should not be shared concurrently |
+| `paramstyle` | `"qmark"` | SQL placeholders use `?` |
+
+### Function
+
+```python
+pyaltibase.connect(
+    host: str = "localhost",
+    port: int = 20300,
+    database: str = "",
+    user: str = "sys",
+    password: str = "",
+    dsn: str | None = None,
+    driver: str = "ALTIBASE_HDB_ODBC_64bit",
+    login_timeout: int | None = None,
+    nls_use: str | None = None,
+    long_data_compat: bool = True,
+    **kwargs: object,
+) -> Connection
+```
+
+!!! note "Autocommit parameter"
+    `autocommit` is accepted via `**kwargs` and routed to `Connection(...)`.
+
+## Connection class (`pyaltibase.connection.Connection`)
+
+### Core attributes and properties
+
+| Name | Type | Description |
+|---|---|---|
+| `config` | `ConnectionConfig` | Stored connection settings |
+| `closed` | `bool` | True when closed |
+| `autocommit` | `bool` | Get/set transaction autocommit |
+| `native_connection` | `object` | Wrapped `pyodbc` connection |
+
+### Methods
+
+```python
+cursor() -> object
+commit() -> None
+rollback() -> None
+close() -> None
+__enter__() -> Connection
+__exit__(exc_type, exc, tb) -> None
+```
+
+| Method | Description |
+|---|---|
+| `cursor()` | Creates a wrapped `Cursor` over native cursor |
+| `commit()` | Commits current transaction |
+| `rollback()` | Rolls back current transaction |
+| `close()` | Closes tracked cursors and native connection |
+| context manager | Commits on success, rollbacks on error, then closes |
+
+## Cursor class (`pyaltibase.cursor.Cursor`)
+
+### Properties
+
+| Name | Type | Description |
+|---|---|---|
+| `description` | `tuple[DescriptionItem, ...] \| None` | Result metadata |
+| `rowcount` | `int` | Affected/available row count from backend |
+| `arraysize` | `int` | Default fetch batch size |
+| `lastrowid` | `object \| None` | Backend last inserted row id if available |
+| `native_cursor` | `object` | Wrapped native cursor |
+
+### Methods
+
+```python
+close() -> None
+execute(operation: str, parameters: Sequence[Any] | Mapping[str, Any] | None = None) -> Cursor
+executemany(operation: str, seq_of_parameters: Sequence[Sequence[Any] | Mapping[str, Any]]) -> Cursor
+fetchone() -> tuple[Any, ...] | None
+fetchmany(size: int | None = None) -> list[tuple[Any, ...]]
+fetchall() -> list[tuple[Any, ...]]
+setinputsizes(sizes: Any) -> None
+setoutputsize(size: int, column: int | None = None) -> None
+callproc(procname: str, parameters: Sequence[Any] = ()) -> Sequence[Any]
+nextset() -> None
+__iter__() -> Cursor
+__next__() -> tuple[Any, ...]
+__enter__() -> Cursor
+__exit__(exc_type, exc, tb) -> None
+```
+
+!!! warning "Parameter binding"
+    Mapping (dict) parameters are rejected for `qmark` style and raise `ProgrammingError`.
+    Use positional sequences.
+
+## Type constructors (`pyaltibase.types`)
+
+```python
+Date(year: int, month: int, day: int) -> datetime.date
+Time(hour: int, minute: int, second: int) -> datetime.time
+Timestamp(year: int, month: int, day: int, hour: int, minute: int, second: int) -> datetime.datetime
+DateFromTicks(ticks: float) -> datetime.date
+TimeFromTicks(ticks: float) -> datetime.time
+TimestampFromTicks(ticks: float) -> datetime.datetime
+Binary(value: bytes | bytearray | str) -> bytes
+```
+
+## DBAPIType objects
+
+`pyaltibase` exposes PEP 249 type objects as `DBAPIType` instances.
+
+| Name | Internal values (`frozenset[int]`) |
+|---|---|
+| `STRING` | `{1, 12, 13}` |
+| `BINARY` | `{2, 14}` |
+| `NUMBER` | `{3, 4, 5, 6, 7}` |
+| `DATETIME` | `{8, 9, 10, 11}` |
+| `ROWID` | `{15}` |
+
+!!! info "Implementation detail"
+    The integer value groups are provisional placeholders in current implementation.
+
+## Public exception classes
+
+The following are exported from package root:
+
+- `Warning`
+- `Error`
+- `InterfaceError`
+- `DatabaseError`
+- `DataError`
+- `OperationalError`
+- `IntegrityError`
+- `InternalError`
+- `ProgrammingError`
+- `NotSupportedError`
+
+## Class diagram
+
+```mermaid
+classDiagram
+    class Connection {
+      +config: ConnectionConfig
+      +closed: bool
+      +autocommit: bool
+      +native_connection: object
+      +cursor() object
+      +commit() None
+      +rollback() None
+      +close() None
+    }
+
+    class Cursor {
+      +description
+      +rowcount: int
+      +arraysize: int
+      +lastrowid
+      +native_cursor: object
+      +execute(operation, parameters) Cursor
+      +executemany(operation, seq_of_parameters) Cursor
+      +fetchone()
+      +fetchmany(size)
+      +fetchall()
+      +callproc(procname, parameters)
+      +nextset()
+      +close()
+    }
+
+    Connection --> Cursor : creates
+```
+
+---
+
+# Type Mapping
+
+`pyaltibase` follows PEP 249 type objects and constructors.
+
+## PEP 249 type objects
+
+`DBAPIType` supports comparison with integers and other `DBAPIType` objects.
+
+| Object | Category |
+|---|---|
+| `STRING` | Character/string families |
+| `BINARY` | Binary payloads |
+| `NUMBER` | Numeric families |
+| `DATETIME` | Date/time families |
+| `ROWID` | Row identifier |
+
+!!! info "Current status"
+    Type object integer groups are provisional placeholders until deeper metadata mapping is implemented.
+
+## Type constructors
+
+| Constructor | Returns | Typical use |
+|---|---|---|
+| `Date(y, m, d)` | `datetime.date` | Bind SQL `DATE` |
+| `Time(h, m, s)` | `datetime.time` | Bind SQL `TIME` |
+| `Timestamp(...)` | `datetime.datetime` | Bind SQL `TIMESTAMP` |
+| `DateFromTicks(t)` | `datetime.date` | Convert Unix ticks to date |
+| `TimeFromTicks(t)` | `datetime.time` | Convert Unix ticks to time |
+| `TimestampFromTicks(t)` | `datetime.datetime` | Convert Unix ticks to timestamp |
+| `Binary(v)` | `bytes` | Bind binary data (`bytes`, `bytearray`, or UTF-8 encoded `str`) |
+
+## Altibase SQL type to Python type guidance
+
+The exact runtime mapping comes from Altibase ODBC driver + `pyodbc`. The following table summarizes common outcomes when fetching rows:
+
+| Altibase SQL type (common) | Typical Python value | DB-API category |
+|---|---|---|
+| `CHAR`, `VARCHAR` | `str` | `STRING` |
+| `NCHAR`, `NVARCHAR` | `str` | `STRING` |
+| `CLOB` | `str` (driver-dependent for large values) | `STRING` |
+| `BINARY`, `VARBINARY` | `bytes` | `BINARY` |
+| `BLOB` | `bytes` (driver-dependent for large values) | `BINARY` |
+| `SMALLINT`, `INTEGER`, `BIGINT` | `int` | `NUMBER` |
+| `NUMERIC`, `DECIMAL` | `decimal.Decimal` or `float` (driver-dependent) | `NUMBER` |
+| `REAL`, `FLOAT`, `DOUBLE` | `float` | `NUMBER` |
+| `DATE` | `datetime.date` | `DATETIME` |
+| `TIME` | `datetime.time` | `DATETIME` |
+| `TIMESTAMP` | `datetime.datetime` | `DATETIME` |
+| `ROWID` | Driver-provided scalar | `ROWID` |
+
+!!! warning "Driver-dependent behavior"
+    Large object retrieval and some numeric conversions may vary by ODBC driver version and settings.
+    Validate mappings in your environment.
+
+## Type resolution flow
+
+```mermaid
+flowchart TD
+    A[Altibase column type] --> B[ODBC metadata/code]
+    B --> C[pyodbc native value]
+    C --> D[pyaltibase tuple conversion]
+    D --> E[Application-level Python type]
+
+    F[PEP 249 helpers] --> G[Date/Time/Timestamp/Binary constructors]
+    G --> E
+```
+
+## Practical examples
+
+```python
+import pyaltibase
+from pyaltibase import Date, Timestamp, Binary
+
+with pyaltibase.connect(host="localhost", user="sys", password="manager") as conn:
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO sample_table(created_on, created_at, payload) VALUES (?, ?, ?)",
+            [Date(2026, 4, 6), Timestamp(2026, 4, 6, 10, 30, 0), Binary("hello")],
+        )
+```
+
+---
+
+# Error Handling
+
+`pyaltibase` exposes a package-owned PEP 249 exception hierarchy and maps backend `pyodbc` errors into these classes.
+
+## Exception hierarchy
+
+```mermaid
+classDiagram
+    Exception <|-- Warning
+    Exception <|-- Error
+    Error <|-- InterfaceError
+    Error <|-- DatabaseError
+    DatabaseError <|-- DataError
+    DatabaseError <|-- OperationalError
+    DatabaseError <|-- IntegrityError
+    DatabaseError <|-- InternalError
+    DatabaseError <|-- ProgrammingError
+    DatabaseError <|-- NotSupportedError
+```
+
+## Exception classes
+
+| Class | Base | When to expect |
+|---|---|---|
+| `Warning` | `Exception` | Important warnings |
+| `Error` | `Exception` | Generic package error |
+| `InterfaceError` | `Error` | Interface usage problems (e.g., closed connection/cursor, missing pyodbc) |
+| `DatabaseError` | `Error` | Database-side failures |
+| `DataError` | `DatabaseError` | Invalid/overflow/truncation-like data problems |
+| `OperationalError` | `DatabaseError` | Operational failures (connectivity, runtime state) |
+| `IntegrityError` | `DatabaseError` | Constraint/integrity failures |
+| `InternalError` | `DatabaseError` | Internal engine/backend errors |
+| `ProgrammingError` | `DatabaseError` | Invalid SQL or API misuse |
+| `NotSupportedError` | `DatabaseError` | Unsupported operation/API |
+
+`DatabaseError` instances may carry:
+
+- `msg`
+- `code`
+- `errno` (optional)
+- `sqlstate` (optional)
+
+## Backend mapping (`pyodbc` -> `pyaltibase`)
+
+`Connection._map_backend_error` maps by backend class name in this order:
+
+1. `InterfaceError`
+2. `DataError`
+3. `IntegrityError`
+4. `InternalError`
+5. `ProgrammingError`
+6. `NotSupportedError`
+7. `OperationalError`
+8. `DatabaseError`
+9. `Error`
+10. Fallback: `Error(str(exc))`
+
+!!! note "Why this matters"
+    You can catch package-owned exceptions consistently even though runtime backend is `pyodbc`.
+
+## Error handling patterns
+
+### Connection and execution boundary
+
+```python
+import pyaltibase
+from pyaltibase import InterfaceError, OperationalError, ProgrammingError
+
+try:
+    with pyaltibase.connect(host="localhost", port=20300, user="sys", password="manager") as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            rows = cur.fetchall()
+except InterfaceError as exc:
+    print(f"Interface setup issue: {exc}")
+except OperationalError as exc:
+    print(f"Operational database issue: {exc}")
+except ProgrammingError as exc:
+    print(f"SQL/API issue: {exc}")
+```
+
+### Transaction safety with rollback
+
+```python
+import pyaltibase
+from pyaltibase import DatabaseError
+
+conn = pyaltibase.connect(host="localhost", user="sys", password="manager")
+try:
+    cur = conn.cursor()
+    cur.execute("INSERT INTO t(a) VALUES (?)", [1])
+    conn.commit()
+except DatabaseError:
+    conn.rollback()
+    raise
+finally:
+    conn.close()
+```
+
+### Closed resource guardrails
+
+!!! warning "Closed connection"
+    Calling `cursor()`, `commit()`, `rollback()`, or accessing `native_connection` on a closed connection raises `InterfaceError("connection is closed")`.
+
+!!! warning "Closed cursor"
+    Calling cursor operations after `close()` raises `InterfaceError("cursor is closed")`.
+
+---
+
+# Architecture
+
+## Layers
+
+1. Application code calls `pyaltibase.connect(...)`.
+2. `pyaltibase.connection.Connection` builds an Altibase ODBC connection string.
+3. `pyodbc` opens the real database connection.
+4. `pyaltibase.cursor.Cursor` delegates execute and fetch operations to the native cursor.
+5. Backend exceptions are mapped into package-owned DB-API exception classes.
+
+## Design choices
+
+- `qmark` parameter style matches `pyodbc` and DB-API 2.0 expectations.
+- Package-owned exception classes keep the public API stable.
+- Connection-string creation is isolated in `protocol.py` so backend behavior is testable.
+- Unit tests use a fake `pyodbc` backend; e2e tests validate the real driver path.
+
+## End-to-end runtime view
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant API as pyaltibase.connect
+    participant Conn as Connection
+    participant Proto as protocol.build_connection_string
+    participant ODBC as pyodbc
+    participant Cur as Cursor
+
+    App->>API: connect(...)
+    API->>Conn: create ConnectionConfig
+    Conn->>Proto: build_connection_string(config)
+    Proto-->>Conn: ODBC string
+    Conn->>ODBC: connect(conn_str, autocommit, timeout)
+    ODBC-->>Conn: native connection
+    App->>Conn: cursor()
+    Conn->>ODBC: native cursor()
+    Conn-->>Cur: wrapped cursor
+    App->>Cur: execute/fetch
+```
+
+## Error translation boundary
+
+```mermaid
+flowchart LR
+    A[pyodbc Exception] --> B[_map_backend_error]
+    B --> C[pyaltibase Error subclass]
+    C --> D[Application catches stable public exceptions]
+```
+
+!!! note "Stability contract"
+    Application code should catch `pyaltibase` exceptions, not backend-specific exceptions,
+    to keep behavior stable when backend details evolve.
+
+!!! tip "Extensibility"
+    New connection attributes can be added without changing method signatures by routing through `**kwargs` into `ConnectionConfig.options`.
+
+---
+
+# Testing
+
+## Unit tests
+
+Unit tests run in Docker and enforce at least `95%` line coverage.
+
+```bash
+make test-docker
+```
+
+The unit-test container installs development dependencies and runs:
+
+```bash
+python -m pytest --cov=pyaltibase --cov-report=term-missing --cov-fail-under=95
+```
+
+## End-to-end tests
+
+End-to-end tests are Docker-based and expect an Altibase Docker image with the
+required runtime and license setup available.
+
+### Required environment variables
+
+- `ALTIBASE_IMAGE` (optional, defaults to `altibase/altibase:latest`)
+- `ALTIBASE_PORT` (optional, defaults to `20300`)
+- `ALTIBASE_DATABASE` (optional)
+- `ALTIBASE_USER` (optional)
+- `ALTIBASE_PASSWORD` (optional)
+- `ALTIBASE_DRIVER` (optional)
+- `ALTIBASE_NLS_USE` (optional)
+
+### Run e2e
+
+```bash
+make test-e2e-docker
+```
+
+The e2e test runner waits for the database port and then runs the package smoke
+tests against the live service.
+
+---
+
+# FAQ and Troubleshooting
+
+```mermaid
+flowchart TD
+    A[Connection/query issue] --> B{What failed?}
+    B -->|Import| C[Check pyodbc installation]
+    B -->|ODBC setup| D[Check Altibase ODBC driver or DSN]
+    B -->|Network| E[Check host/port and server status]
+    B -->|Text encoding| F[Adjust NLS_USE]
+    B -->|LOB behavior| G[Toggle LongDataCompat]
+    C --> H[Retry]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+```
+
+??? question "pyodbc not found"
+    **Symptom**
+
+    - `InterfaceError: pyodbc is required to use pyaltibase...`
+
+    **Fix**
+
+    1. Install `pyodbc` in the active environment.
+    2. Ensure system ODBC manager/libraries are installed.
+    3. Re-run your script in the same Python environment.
+
+    ```bash
+    pip install pyodbc
+    ```
+
+??? question "Altibase ODBC driver not found"
+    **Symptom**
+
+    - Backend connection error indicating driver or DSN is missing.
+
+    **Fix**
+
+    1. Verify installed driver name matches `driver` argument exactly.
+    2. If using DSN, verify DSN exists and is readable by runtime user.
+    3. Check ODBC manager configuration files and architecture (32/64-bit).
+
+??? question "Connection refused (default port 20300)"
+    **Symptom**
+
+    - Connection attempt fails with network/refused error.
+
+    **Fix**
+
+    1. Confirm Altibase server is running.
+    2. Confirm target host and `port=20300` (or your custom port).
+    3. Check firewall/security-group/network-policy rules.
+    4. Validate service bind address from database host.
+
+??? question "NLS_USE encoding issues"
+    **Symptom**
+
+    - Non-ASCII text appears corrupted or decoding behaves unexpectedly.
+
+    **Fix**
+
+    1. Set explicit `nls_use` in `connect()`.
+    2. Align setting with server-side expectations.
+    3. Re-test with representative multilingual data.
+
+    ```python
+    conn = pyaltibase.connect(
+        host="localhost",
+        user="sys",
+        password="manager",
+        nls_use="UTF8",
+    )
+    ```
+
+??? question "LONG_DATA_COMPAT errors"
+    **Symptom**
+
+    - Errors or unexpected behavior when reading/writing large text or binary payloads.
+
+    **Fix**
+
+    1. Toggle `long_data_compat` and retry.
+    2. Validate behavior with real LOB sizes in your environment.
+
+    ```python
+    conn = pyaltibase.connect(
+        host="localhost",
+        user="sys",
+        password="manager",
+        long_data_compat=False,
+    )
+    ```
+
+!!! tip "Still stuck?"
+    Capture the exact exception class and message (`type(exc).__name__`, `str(exc)`), plus your connection mode (DSN vs driver) and ODBC driver name before escalating.
