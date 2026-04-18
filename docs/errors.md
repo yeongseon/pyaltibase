@@ -33,12 +33,14 @@ classDiagram
 | `ProgrammingError` | `DatabaseError` | Invalid SQL or API misuse |
 | `NotSupportedError` | `DatabaseError` | Unsupported operation/API |
 
-`DatabaseError` instances may carry:
+`DatabaseError` instances carry:
 
 - `msg`
 - `code`
-- `errno` (optional)
-- `sqlstate` (optional)
+- `errno` — native error number extracted from backend exception (when available)
+- `sqlstate` — 5-character SQLSTATE code extracted from backend exception (when available)
+
+Backend `errno` and `sqlstate` are automatically preserved via `_extract_backend_error_details` during error mapping.
 
 ## Backend mapping (`pyodbc` -> `pyaltibase`)
 

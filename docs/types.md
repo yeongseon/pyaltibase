@@ -6,16 +6,13 @@
 
 `DBAPIType` supports comparison with integers and other `DBAPIType` objects.
 
-| Object | Category |
-|---|---|
-| `STRING` | Character/string families |
-| `BINARY` | Binary payloads |
-| `NUMBER` | Numeric families |
-| `DATETIME` | Date/time families |
-| `ROWID` | Row identifier |
-
-!!! info "Current status"
-    Type object integer groups are provisional placeholders until deeper metadata mapping is implemented.
+| Object | ODBC SQL type codes | Category |
+|---|---|---|
+| `STRING` | `{1, 12}` (`SQL_CHAR`, `SQL_VARCHAR`) | Character/string families |
+| `BINARY` | `{-2, -3, -4}` (`SQL_BINARY`, `SQL_VARBINARY`, `SQL_LONGVARBINARY`) | Binary payloads |
+| `NUMBER` | `{-5, 2, 3, 4, 5, 6, 7, 8}` (`SQL_BIGINT`, `SQL_NUMERIC`…`SQL_DOUBLE`) | Numeric families |
+| `DATETIME` | `{91, 92, 93}` (`SQL_TYPE_DATE`, `SQL_TYPE_TIME`, `SQL_TYPE_TIMESTAMP`) | Date/time families |
+| `ROWID` | `{15}` | Row identifier |
 
 ## Type constructors
 
