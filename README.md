@@ -17,7 +17,7 @@ Altibase Corporation. This project is not affiliated with Altibase Corporation.
 
 - Python DB-API 2.0 compatible module surface
 - Direct host/port or DSN-based Altibase ODBC connections
-- Package-owned exception hierarchy and type constructors
+- Package-owned exception hierarchy and type constructors with `errno`/`sqlstate` preservation
 - Dockerized unit-test workflow with a 95% coverage target
 - Docker-based end-to-end test harness for licensed Altibase environments
 

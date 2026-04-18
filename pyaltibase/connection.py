@@ -186,9 +186,29 @@ def _map_backend_error(error: Exception, pyodbc_module: Any) -> Error:
         ("DatabaseError", DatabaseError),
         ("Error", Error),
     ]
+    message, code, errno, sqlstate = _extract_backend_error_details(error)
 
     for backend_name, local_exc in mappings:
         backend_cls = getattr(pyodbc_module, backend_name, None)
         if backend_cls is not None and isinstance(error, backend_cls):
-            return local_exc(str(error))
-    return Error(str(error))
+            if issubclass(local_exc, DatabaseError):
+                return local_exc(message, code=code, errno=errno, sqlstate=sqlstate)
+            return local_exc(message, code=code)
+    return Error(message, code=code)
+
+
+def _extract_backend_error_details(error: Exception) -> tuple[str, int, int | None, str | None]:
+    args = tuple(getattr(error, "args", ()))
+    if not args:
+        return str(error), 0, None, None
+
+    sqlstate = args[0] if isinstance(args[0], str) and len(args[0]) == 5 else None
+    errno = next((value for value in reversed(args) if isinstance(value, int)), None)
+    code = 0 if errno is None else errno
+
+    message_parts = args[1:] if sqlstate is not None and len(args) > 1 else args
+    message = " ".join(str(part) for part in message_parts if part not in ("", None))
+    if not message:
+        message = str(error)
+
+    return message, code, errno, sqlstate
